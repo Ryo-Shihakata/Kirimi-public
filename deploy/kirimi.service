@@ -1,0 +1,15 @@
+[Unit]
+Description=Kirimi (Kimono Labs clone)
+After=network-online.target
+
+[Service]
+Type=simple
+User=dev-host
+WorkingDirectory=/home/<user>/dev/projects/Kirimi
+EnvironmentFile=-/home/<user>/dev/projects/Kirimi/.env
+ExecStart=/home/<user>/.nvm/versions/node/v22.23.1/bin/node src/server.js
+RestartSec=5
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

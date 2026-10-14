@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API詳細 - Kirimi</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="logo" href="/">Kiri<span>mi</span></a>
+  <span class="spacer"></span>
+</header>
+<main id="main"><p class="muted">読み込み中…</p></main>
+<script type="module">
+import { api, ensureLogin, esc, fmtTime, rowsTable } from '/common.js';
+const id = new URLSearchParams(location.search).get('id');
+const SCHED = { manual: '手動', '15min': '15分ごと', hourly: '1時間ごと', daily: '毎日', weekly: '毎週' };
+const main = document.getElementById('main');
+let pollTimer = null;
+let shownRun = null;
+
+async function load() {
+  const a = await api(`/apis/${id}`);
+  const runs = await api(`/apis/${id}/runs`);
+  document.title = `${a.name} - Kirimi`;
+  const base = `${location.origin}/v1/${a.id}?token=${a.token}`;
+  const cols = a.config.collections.map((c) => c.name);
+  main.innerHTML = `
+    <div class="card">
+      <div class="row"><h2 style="margin:0;flex:1">${esc(a.name)}</h2>
+        <button id="run" class="primary" ${a.running ? 'disabled' : ''}>${a.running ? '実行中…' : '今すぐ実行'}</button>
+        <a class="btn" href="/editor?id=${a.id}">編集</a>
+        <button id="del" class="danger">削除</button></div>
+      <p class="muted mono">${esc(a.config.url)}</p>
+      <div class="row">更新頻度
+        <select id="sched">${Object.entries(SCHED).map(([k, v]) => `<option value="${k}" ${k === a.schedule ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <span class="muted">${a.config.render ? 'JS描画あり' : 'JS描画なし'} / ページ送り ${a.config.pagination?.selector ? `最大${a.config.pagination.maxPages}ページ` : 'なし'} / 詳細巡回 ${a.config.detail?.field ? `あり（最大${a.config.detail.max}件）` : 'なし'}</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">エンドポイント</h3>
+      <p><span class="pill">JSON</span> <code>${esc(base)}</code></p>
+      ${cols.map((c) => `<p><span class="pill">CSV</span> <code>${esc(`${base}&format=csv&collection=${encodeURIComponent(c)}`)}</code></p>
+        <p><span class="pill">RSS</span> <code>${esc(`${base}&format=rss&collection=${encodeURIComponent(c)}`)}</code></p>`).join('')}
+      <p class="muted">トークンは <code>Authorization: Bearer …</code> ヘッダでも渡せます。 <button id="rotate" class="small">トークン再発行</button></p>
+    </div>
+    <div class="card"><h3 style="margin-top:0">実行履歴</h3>
+      ${runs.length ? `<table><thead><tr><th>#</th><th>開始</th><th>状態</th><th>ページ</th><th>件数</th><th></th></tr></thead><tbody>
+      ${runs.map((r) => `<tr><td>${r.id}</td><td>${fmtTime(r.started_at)}</td>
+        <td><span class="pill ${r.status === 'ok' ? 'ok' : r.status === 'error' ? 'err' : ''}">${r.status}</span> ${r.error ? `<span class="err">${esc(r.error)}</span>` : ''}</td>
+        <td>${r.pages}</td><td>${r.row_count}</td><td>${r.status === 'ok' ? `<button class="small" data-run="${r.id}">データ</button>` : ''}</td></tr>`).join('')}
+      </tbody></table>` : '<p class="muted">まだ実行していません。</p>'}
+    </div>
+    <div class="card" id="data"></div>`;
+
+  document.getElementById('run').onclick = async () => { await api(`/apis/${id}/run`, { method: 'POST' }); load(); };
+  document.getElementById('del').onclick = async () => {
+    if (!confirm(`「${a.name}」を削除します。実行履歴も消えます。`)) return;
+    await api(`/apis/${id}`, { method: 'DELETE' }); location.href = '/';
+  };
+  document.getElementById('rotate').onclick = async () => {
+    if (!confirm('今のトークンは使えなくなります。')) return;
+    await api(`/apis/${id}/token`, { method: 'POST' }); load();
+  };
+  document.getElementById('sched').onchange = async (e) => {
+    await api(`/apis/${id}`, { method: 'PUT', body: { name: a.name, config: a.config, schedule: e.target.value } });
+  };
+  main.querySelectorAll('[data-run]').forEach((b) => (b.onclick = () => showRun(Number(b.dataset.run))));
+
+  const latest = runs.find((r) => r.status === 'ok');
+  if (shownRun || latest) showRun(shownRun ?? latest.id);
+  clearTimeout(pollTimer);
+  if (a.running || runs[0]?.status === 'running') pollTimer = setTimeout(load, 2000);
+}
+
+async function showRun(runId) {
+  shownRun = runId;
+  const r = await api(`/runs/${runId}`);
+  document.getElementById('data').innerHTML = `<h3 style="margin-top:0">データ（実行 #${r.id} / ${fmtTime(r.finished_at)}）</h3>` +
+    Object.entries(r.data || {}).map(([name, rows]) => `<h4>${esc(name)}</h4>${rowsTable(rows)}`).join('');
+}
+
+if (await ensureLogin()) load().catch((e) => (main.textContent = e.message));
+</script>
+</body>
+</html>

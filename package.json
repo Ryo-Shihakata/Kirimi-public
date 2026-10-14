@@ -1,0 +1,32 @@
+{
+  "name": "kirimi",
+  "version": "1.0.0",
+  "description": "Kimono Labs風：クリックでWebページをAPI化するセルフホスト型スクレイパー",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js",
+    "mcp": "node src/mcp.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "better-sqlite3": "^13.0.3",
+    "cheerio": "^1.2.0",
+    "express": "^5.2.1",
+    "playwright": "^1.63.0",
+    "zod": "^4.6.5"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "kirimi-mcp": "src/mcp.js"
+  }
+}

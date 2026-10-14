@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>エディタ - Kirimi</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="editor">
+<header class="top">
+  <a class="logo" href="/">Kiri<span>mi</span></a>
+  <div class="modes" id="modes">
+    <button data-mode="list" class="active">① データを選ぶ</button>
+    <button data-mode="next">② 次ページ</button>
+    <button data-mode="detail">③ 詳細ページ</button>
+  </div>
+  <span class="spacer"></span>
+  <button id="save" class="primary">保存</button>
+</header>
+<form class="urlbar" id="urlbar">
+  <input type="url" name="url" placeholder="https://example.com/list" required>
+  <label class="row"><input type="checkbox" name="render" checked> JSを実行して描画</label>
+  <label class="row muted">待機 <input type="number" name="waitMs" value="0" min="0" max="20000" step="500" style="width:80px">ms</label>
+  <button class="primary">開く</button>
+  <button type="button" id="reload" title="キャッシュを使わず再取得">再取得</button>
+</form>
+<div class="editor-main">
+  <iframe id="frame" title="対象ページ"></iframe>
+  <aside class="side" id="side"></aside>
+</div>
+<script type="module" src="/editor.js"></script>
+</body>
+</html>
